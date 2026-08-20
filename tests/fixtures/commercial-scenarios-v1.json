@@ -1,0 +1,33 @@
+{
+  "scenarios": [
+    {
+      "name": "Presupuesto sin respuesta",
+      "opportunity": {"id":"opp-001","status":"proposal_sent","follow_up_count":0,"next_follow_up_at":"2026-08-19T15:00:00Z","company_name":"Acme Servicios","contact_name":"María","preferred_channel":"whatsapp"},
+      "expected": {"action":"send_follow_up","stage":"proposal_sent"}
+    },
+    {
+      "name": "Señal de compra",
+      "opportunity": {"id":"opp-002","status":"qualified","follow_up_count":1},
+      "message": "Perfecto, ¿cómo hacemos para contratar?",
+      "expected": {"intent":"purchase_signal","human_required":true,"recommended_action":"notify_human"}
+    },
+    {
+      "name": "Objeción de precio",
+      "opportunity": {"id":"opp-003","status":"proposal_sent","follow_up_count":1},
+      "message": "Me interesa, pero el precio es demasiado alto para nosotros.",
+      "expected": {"intent":"objection","human_required":true}
+    },
+    {
+      "name": "No es el momento",
+      "opportunity": {"id":"opp-004","status":"engaged","follow_up_count":1},
+      "message": "Ahora no podemos avanzar. Hablemos el mes que viene.",
+      "expected": {"intent":"not_now","recommended_action":"schedule","stage_action":"nurture"}
+    },
+    {
+      "name": "Negativa",
+      "opportunity": {"id":"opp-005","status":"contacted","follow_up_count":2},
+      "message": "No me interesa, gracias.",
+      "expected": {"intent":"negative","recommended_action":"close","stage_action":"close"}
+    }
+  ]
+}
