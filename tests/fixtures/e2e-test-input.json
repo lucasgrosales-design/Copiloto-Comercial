@@ -1,0 +1,16 @@
+{
+  "event_id":"evt-test-001",
+  "event_type":"message_received",
+  "message":"Perfecto, ¿cómo hacemos para contratar?",
+  "opportunity":{
+    "id":"opp-test-001",
+    "company_name":"Empresa Demo",
+    "contact_name":"Juan Pérez",
+    "status":"qualified",
+    "lead_score":75,
+    "follow_up_count":1,
+    "summary":"Busca mejorar el seguimiento comercial y mostró interés en la solución.",
+    "next_follow_up_at":null,
+    "human_required":false
+  }
+}
