@@ -1,0 +1,13 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"ContactIdentity",
+  "type":"object",
+  "required":["contact_id","identities","status"],
+  "properties":{
+    "contact_id":{"type":"string"},
+    "company_id":{"type":["string","null"]},
+    "identities":{"type":"array","items":{"type":"object","required":["channel","value","verified"],"properties":{"channel":{"enum":["whatsapp","email","instagram","facebook","linkedin","webchat","other"]},"value":{"type":"string"},"verified":{"type":"boolean"},"verified_at":{"type":["string","null"],"format":"date-time"}}}},
+    "status":{"enum":["confirmed","candidate","identity_review_required"]},
+    "source_of_match":{"type":["string","null"]}
+  }
+}
