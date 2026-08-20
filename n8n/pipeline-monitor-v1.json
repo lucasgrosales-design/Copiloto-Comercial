@@ -1,0 +1,19 @@
+{
+  "name":"Copiloto Comercial - Pipeline Monitor v1",
+  "nodes":[
+    {"parameters":{},"id":"manual","name":"Trigger - Pipeline Check","type":"n8n-nodes-base.manualTrigger","typeVersion":1,"position":[-680,0]},
+    {"parameters":{"jsCode":"const opportunities=$input.all().map(i=>i.json);\nconst now=Date.now();\nconst active=opportunities.filter(o=>!['won','lost'].includes(o.status));\nconst overdue=active.filter(o=>o.next_follow_up_at && new Date(o.next_follow_up_at).getTime()<now);\nconst noNextStep=active.filter(o=>!o.next_follow_up_at && !o.human_required && !['nurture'].includes(o.status));\nconst hot=active.filter(o=>['purchase_signal','interested'].includes(o.last_intent)||Number(o.lead_score||0)>=70);\nconst proposals=active.filter(o=>o.status==='proposal_sent');\nreturn [{json:{checked_at:new Date().toISOString(),total_active:active.length,overdue_count:overdue.length,no_next_step_count:noNextStep.length,hot_count:hot.length,proposal_count:proposals.length,overdue_ids:overdue.map(o=>o.id),no_next_step_ids:noNextStep.map(o=>o.id),hot_ids:hot.map(o=>o.id),priority:'high'}}];"},"id":"monitor","name":"Monitor Pipeline","type":"n8n-nodes-base.code","typeVersion":2,"position":[-420,0]},
+    {"parameters":{"jsCode":"const r=$json;\nconst parts=[];\nif(r.hot_count) parts.push(`${r.hot_count} oportunidades con señal de compra o alto score`);\nif(r.overdue_count) parts.push(`${r.overdue_count} seguimientos vencidos`);\nif(r.no_next_step_count) parts.push(`${r.no_next_step_count} oportunidades activas sin próximo paso`);\nif(r.proposal_count) parts.push(`${r.proposal_count} propuestas en circulación`);\nconst message=parts.length?`Reporte de Copiloto Comercial: ${parts.join('; ')}.`:'Reporte de Copiloto Comercial: no detecté excepciones críticas.';\nreturn [{json:{...r,executive_message:message,notify_human:parts.length>0,event:'pipeline_monitor'}}];"},"id":"report","name":"Build Executive Report","type":"n8n-nodes-base.code","typeVersion":2,"position":[-160,0]},
+    {"parameters":{"conditions":{"options":{"caseSensitive":false},"conditions":[{"leftValue":"={{$json.notify_human}}","rightValue":true,"operator":{"type":"boolean","operation":"equals"}}],"combinator":"and"}},"id":"notify","name":"Needs Attention?","type":"n8n-nodes-base.if","typeVersion":2,"position":[100,0]},
+    {"parameters":{"jsCode":"return [{json:{...$json,channel:'whatsapp',delivery_status:'ready',note:'Connect WhatsApp provider here.'}}];"},"id":"whatsapp","name":"Prepare WhatsApp Alert","type":"n8n-nodes-base.code","typeVersion":2,"position":[360,-100]},
+    {"parameters":{"jsCode":"return [{json:{...$json,event:'pipeline_checked'}}];"},"id":"audit","name":"Audit","type":"n8n-nodes-base.code","typeVersion":2,"position":[360,100]}
+  ],
+  "connections":{
+    "Trigger - Pipeline Check":{"main":[[{"node":"Monitor Pipeline","type":"main","index":0}]]},
+    "Monitor Pipeline":{"main":[[{"node":"Build Executive Report","type":"main","index":0}]]},
+    "Build Executive Report":{"main":[[{"node":"Needs Attention?","type":"main","index":0}]]},
+    "Needs Attention?":{"main":[[{"node":"Prepare WhatsApp Alert","type":"main","index":0}],[{"node":"Audit","type":"main","index":0}]]},
+    "Prepare WhatsApp Alert":{"main":[[{"node":"Audit","type":"main","index":0}]]}
+  },
+  "active":false,"settings":{},"meta":{"templateCredsSetupCompleted":false}
+}
