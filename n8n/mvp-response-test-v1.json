@@ -1,0 +1,17 @@
+{
+  "name":"Copiloto Comercial - MVP Response Test v1",
+  "nodes":[
+    {"parameters":{},"id":"manual","name":"Test Message","type":"n8n-nodes-base.manualTrigger","typeVersion":1,"position":[-520,0]},
+    {"parameters":{"jsCode":"const message='Hola, vi la propuesta. Me interesa, pero quisiera saber si podemos empezar este mes.';\nreturn [{json:{event_id:'test-'+Date.now(),channel:'whatsapp',contact_id:'contact-test-001',opportunity_id:'opp-test-001',received_at:new Date().toISOString(),text:message,opportunity:{stage:'proposal_sent',summary:'Prospecto interesado que recibió una propuesta.'}}}];"},"id":"input","name":"Simulate Prospect Message","type":"n8n-nodes-base.code","typeVersion":2,"position":[-300,0]},
+    {"parameters":{"jsCode":"const e=$json; const t=e.text.toLowerCase(); let intent='unclear'; let urgency='unknown'; let human_required=false; let stage=e.opportunity?.stage||'unknown'; let action='clarify'; let reason='Insufficient evidence.'; if(t.includes('me interesa')){intent='interest'; urgency=t.includes('este mes')?'high':'medium'; action='respond_and_advance'; reason='Prospect expresses interest and asks about starting this month.';} if(t.includes('contratar')||t.includes('cómo hacemos')){intent='purchase_signal'; human_required=true; urgency='high'; action='notify_human'; reason='Explicit purchase signal.';} if(t.includes('precio')||t.includes('caro')){intent='objection'; human_required=true; action='notify_human'; reason='Commercial price objection.';} if(t.includes('no me interesa')){intent='negative'; action='close'; reason='Explicit negative response.';} return [{json:{...e,analysis:{intent,urgency,human_required,stage_recommendation:stage,recommended_next_action:action,reason,confidence:intent==='unclear'?0.4:0.9}}}];"},"id":"interpret","name":"Interpret Commercial Signal","type":"n8n-nodes-base.code","typeVersion":2,"position":[-40,0]},
+    {"parameters":{"jsCode":"const e=$json; return [{json:{event_type:'response_classified',event_id:e.event_id,opportunity_id:e.opportunity_id,contact_id:e.contact_id,channel:e.channel,message:e.text,analysis:e.analysis,next_step:e.analysis.recommended_next_action,ready_for_ai:true}}];"},"id":"result","name":"Prepare Decision Result","type":"n8n-nodes-base.code","typeVersion":2,"position":[220,0]}
+  ],
+  "connections":{
+    "Test Message":{"main":[[{"node":"Simulate Prospect Message","type":"main","index":0}]]},
+    "Simulate Prospect Message":{"main":[[{"node":"Interpret Commercial Signal","type":"main","index":0}]]},
+    "Interpret Commercial Signal":{"main":[[{"node":"Prepare Decision Result","type":"main","index":0}]]}
+  },
+  "active":false,
+  "settings":{},
+  "meta":{}
+}
