@@ -2,126 +2,72 @@
 
 ## Objetivo
 
-Convertir el seguimiento comercial en un proceso sistemático, persistente y contextual. El asistente debe ejecutar el próximo paso sin depender de que un director comercial recuerde cada tarea.
+Mantener activas las oportunidades sin convertir el sistema en una máquina de spam. Cada seguimiento debe tener un motivo comercial, contexto y límite.
 
-## Principio central
+## Entradas
 
-El asistente no manda mensajes por mandar. Cada contacto debe tener un motivo, un contexto y una condición de salida.
-
-## Estados
-
-1. `new` — prospecto recibido, todavía sin contacto.
-2. `contacted` — se realizó el primer contacto.
-3. `engaged` — el prospecto respondió o mostró interés.
-4. `qualified` — existe una necesidad y oportunidad comercial identificable.
-5. `proposal_sent` — se envió una propuesta o presupuesto.
-6. `follow_up_due` — corresponde realizar seguimiento.
-7. `negotiation` — existe conversación comercial activa.
-8. `won` — venta concretada.
-9. `lost` — oportunidad perdida con motivo registrado.
-10. `nurture` — no está listo ahora, pero puede reactivarse.
-11. `human_required` — requiere intervención humana.
-
-## Motor de decisión
-
-Para cada oportunidad el sistema evalúa:
-
-- estado actual;
-- última interacción;
-- respuesta del prospecto;
-- tiempo transcurrido desde el último contacto;
-- próximo paso programado;
+- etapa actual;
+- último evento;
+- último contacto;
+- cantidad de seguimientos;
 - intención detectada;
-- objeciones detectadas;
-- valor potencial;
-- urgencia;
-- cantidad de seguimientos realizados;
-- existencia de una condición que requiera humano.
+- objeciones;
+- próximo paso acordado;
+- canal preferido/autorizado;
+- reglas de cadencia;
+- solicitudes de no contacto.
 
-El resultado siempre debe ser una de estas acciones:
+## Decisión
 
-- `wait` — todavía no contactar;
-- `send_follow_up` — enviar seguimiento;
-- `change_stage` — actualizar etapa;
-- `schedule_task` — programar acción futura;
-- `notify_human` — avisar al responsable;
-- `close` — cerrar como ganada/perdida/nurture.
+El motor evalúa en este orden:
 
-## Cadencia inicial MVP
+1. **No contacto** → detener cualquier seguimiento automático.
+2. **Humano requerido** → no enviar automáticamente; generar alerta.
+3. **Respuesta pendiente de nosotros** → priorizar respuesta.
+4. **Próximo paso acordado** → ejecutar cuando llegue la fecha/hora.
+5. **Propuesta enviada sin respuesta** → seguimiento contextual.
+6. **Interés sin próximo paso** → pedir definición del siguiente paso.
+7. **Oportunidad inactiva** → aplicar reactivación limitada.
+8. **Sin potencial suficiente** → no insistir.
 
-### Después del primer contacto
+## Cadencia MVP
 
-- Si responde: procesar respuesta y continuar conversación.
-- Si no responde: seguimiento 1 después del intervalo configurado.
-- Si continúa sin respuesta: seguimiento 2 con un enfoque diferente.
-- Si continúa sin respuesta: seguimiento 3 y luego pasar a `nurture` salvo que el valor/urgencia justifique revisión humana.
+Valores iniciales de prueba:
 
-### Después de enviar presupuesto
+- primer seguimiento: 24 horas después de una propuesta sin respuesta;
+- segundo seguimiento: 72 horas después;
+- tercer seguimiento: 7 días después;
+- luego: detener seguimiento automático y pasar a nurture o cierre según contexto.
 
-- Confirmar recepción.
-- Si no hay respuesta: seguimiento contextual, no genérico.
-- Si aparece una objeción: clasificarla y responder dentro de las reglas configuradas.
-- Si la conversación muestra intención de compra: pasar a `negotiation` y notificar al humano.
-- Si pide cambios en precio, alcance, condiciones o una excepción: `human_required`.
+Son defaults de prueba, no reglas universales. Cada cliente podrá configurar su cadencia por canal y tipo de oportunidad.
 
-## Regla de naturalidad
+## Personalización
 
-No se utilizará una cadencia rígida idéntica para todos. El mensaje debe considerar la última interacción y evitar repetir información que el prospecto ya conoce.
+Nunca enviar solamente “¿viste mi mensaje?”. El seguimiento debe usar el contexto disponible.
 
-El asistente puede cambiar el tono y el ángulo del seguimiento, pero nunca debe inventar información, descuentos, condiciones comerciales o compromisos no autorizados.
+Ejemplo:
 
-## Escalamiento humano
+> Hola María. Quería saber qué te pareció la propuesta que te enviamos. Si hubo algún punto que no quedó claro, decime y lo revisamos para ver si podemos encontrar la mejor solución para lo que necesitan.
 
-Se escala cuando:
+## Límites
 
-- el prospecto solicita una persona;
-- hay negociación sensible de precio o condiciones;
-- existe una objeción fuera del conocimiento disponible;
-- el prospecto muestra alta intención de compra;
-- hay una oportunidad de alto valor;
-- el asistente no tiene suficiente información para responder con seguridad.
+- respetar solicitudes de no contacto;
+- respetar ventanas, límites y políticas aplicables del canal;
+- no prometer descuentos o condiciones no autorizadas;
+- no reiniciar la cadencia indefinidamente;
+- si el prospecto responde, detener el seguimiento programado y volver a interpretar la conversación.
 
-## Registro obligatorio
+## Resultado del motor
 
-Cada acción debe dejar registro de:
+```json
+{
+  "decision":"follow_up|wait|notify_human|close|nurture|respond",
+  "reason":"...",
+  "channel":"whatsapp",
+  "scheduled_at":"...",
+  "message_intent":"proposal_follow_up",
+  "priority":"high|medium|low"
+}
+```
 
-- fecha y hora;
-- oportunidad;
-- canal;
-- acción realizada;
-- mensaje enviado o resumen de la interacción;
-- resultado;
-- nuevo estado;
-- próximo paso;
-- fecha del próximo paso;
-- motivo de escalamiento, si corresponde.
-
-## Métricas MVP
-
-El sistema debe poder reportar:
-
-- prospectos recibidos;
-- prospectos contactados;
-- respuestas;
-- oportunidades calificadas;
-- presupuestos enviados;
-- seguimientos pendientes;
-- seguimientos realizados;
-- oportunidades sin seguimiento;
-- conversiones;
-- oportunidades perdidas;
-- motivos de pérdida;
-- tiempo promedio hasta respuesta;
-- desempeño por vendedor cuando exista equipo comercial.
-
-## WhatsApp ejecutivo
-
-El asistente debe poder generar un resumen operativo para el responsable. Ejemplo:
-
-> Detecté 5 oportunidades con potencial que llevan más tiempo del esperado sin una acción comercial. 2 recibieron presupuesto, 2 están esperando respuesta y 1 mostró interés pero quedó sin próximo paso. Preparé las acciones sugeridas para cada una.
-
-El responsable no tiene que pedirle al asistente que revise el pipeline: el sistema debe detectar situaciones relevantes y comunicarlas proactivamente.
-
-## Límite del MVP
-
-La primera versión prioriza seguimiento, registro, clasificación y alertas. No intenta automatizar toda la venta. La intervención humana permanece disponible en los puntos donde una decisión comercial puede comprometer dinero, margen, condiciones o relación con el cliente.
+El motor decide **qué corresponde hacer**. Un adaptador de canal decide **cómo entregarlo**.
