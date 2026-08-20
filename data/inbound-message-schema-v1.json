@@ -1,0 +1,17 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"InboundMessage",
+  "type":"object",
+  "required":["event_id","channel","external_message_id","contact_id","received_at","text"],
+  "properties":{
+    "event_id":{"type":"string"},
+    "channel":{"enum":["whatsapp","email","instagram","facebook","linkedin","webchat","other"]},
+    "external_message_id":{"type":"string"},
+    "contact_id":{"type":"string"},
+    "opportunity_id":{"type":["string","null"]},
+    "received_at":{"type":"string","format":"date-time"},
+    "text":{"type":"string"},
+    "attachments":{"type":"array"},
+    "metadata":{"type":"object"}
+  }
+}
