@@ -1,0 +1,80 @@
+{
+  "name": "Copiloto Comercial - Follow-up Engine v1",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Trigger - Execute",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-760, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const opportunities = $input.all().map(i => i.json);\nconst now = Date.now();\nconst due = opportunities.filter(o => {\n  if (['won','lost','nurture'].includes(o.status)) return false;\n  if (!o.next_follow_up_at) return true;\n  return new Date(o.next_follow_up_at).getTime() <= now;\n});\nreturn due.map(o => ({json: {...o, decision: 'send_follow_up'}}));"
+      },
+      "id": "evaluate-due",
+      "name": "Evaluate Due Follow-ups",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-520, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": false},
+          "conditions": [
+            {"leftValue": "={{$json.decision}}", "rightValue": "send_follow_up", "operator": {"type": "string", "operation": "equals"}}
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "is-due",
+      "name": "Follow-up Due?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-280, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const o = $json;\nconst stage = o.status || 'new';\nconst attempts = Number(o.follow_up_count || 0);\nlet message;\nif (stage === 'proposal_sent') {\n  message = attempts === 0\n    ? 'Hola, quería confirmar que recibiste la propuesta. Si hay alguna duda o algo que quieras revisar, lo vemos.'\n    : 'Hola, quería saber qué te pareció la propuesta. Si hay algo que no termina de encajar con lo que buscabas, contame y vemos cómo ajustarlo.';\n} else if (stage === 'contacted') {\n  message = 'Hola, retomo el contacto para saber si pudiste revisar lo que conversamos. Si querés, podemos avanzar sobre el próximo paso.';\n} else {\n  message = 'Hola, retomo el contacto para saber si sigue siendo de interés avanzar con esto. Si cambió la prioridad, no hay problema.';\n}\nreturn [{json: {...o, outbound_message: message, next_action: 'send_message'}}];"
+      },
+      "id": "compose-follow-up",
+      "name": "Compose Contextual Follow-up",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-40, -100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const o = $json;\nreturn [{json: {\n  opportunity_id: o.id || null,\n  channel: o.preferred_channel || 'whatsapp',\n  action: 'send_message',\n  message: o.outbound_message,\n  requires_provider_credentials: true,\n  status: 'ready_for_delivery'\n}}];"
+      },
+      "id": "delivery-payload",
+      "name": "Prepare Delivery Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, -100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const o = $json;\nreturn [{json: {\n  ...o,\n  event: 'follow_up_ready',\n  note: 'Connect WhatsApp/provider here before enabling outbound messaging.'\n}}];"
+      },
+      "id": "audit-event",
+      "name": "Create Audit Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, -100]
+    }
+  ],
+  "connections": {
+    "Trigger - Execute": {"main": [[{"node": "Evaluate Due Follow-ups", "type": "main", "index": 0}]]},
+    "Evaluate Due Follow-ups": {"main": [[{"node": "Follow-up Due?", "type": "main", "index": 0}]]},
+    "Follow-up Due?": {"main": [[{"node": "Compose Contextual Follow-up", "type": "main", "index": 0}], []]},
+    "Compose Contextual Follow-up": {"main": [[{"node": "Prepare Delivery Payload", "type": "main", "index": 0}]]},
+    "Prepare Delivery Payload": {"main": [[{"node": "Create Audit Event", "type": "main", "index": 0}]]}
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "copiloto-follow-up-v1",
+  "meta": {"templateCredsSetupCompleted": false}
+}
