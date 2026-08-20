@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Oportunidad Comercial",
+  "type": "object",
+  "required": ["id", "status", "source", "created_at", "next_action"],
+  "properties": {
+    "id": {"type": "string"},
+    "name": {"type": "string"},
+    "company": {"type": "string"},
+    "email": {"type": "string"},
+    "phone": {"type": "string"},
+    "source": {"type": "string"},
+    "status": {"type": "string"},
+    "owner": {"type": ["string", "null"]},
+    "priority": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
+    "created_at": {"type": "string", "format": "date-time"},
+    "last_interaction_at": {"type": ["string", "null"], "format": "date-time"},
+    "next_action": {"type": "string"},
+    "next_action_at": {"type": ["string", "null"], "format": "date-time"},
+    "last_message": {"type": ["string", "null"]},
+    "objection": {"type": ["string", "null"]},
+    "estimated_value": {"type": ["number", "null"]},
+    "tags": {"type": "array", "items": {"type": "string"}}
+  }
+}
