@@ -1,0 +1,15 @@
+{
+  "name":"Copiloto Comercial - Prospecting Intake v1",
+  "nodes":[
+    {"parameters":{},"id":"manual","name":"Trigger - Prospect","type":"n8n-nodes-base.manualTrigger","typeVersion":1,"position":[-620,0]},
+    {"parameters":{"jsCode":"const p=$json;\nconst signals=[];\nif(p.receives_leads) signals.push('receives_leads');\nif(p.owner_sells) signals.push('owner_sells');\nif(p.has_sales_team) signals.push('sales_team');\nif(p.consultative_sale) signals.push('consultative_sale');\nif(p.multiple_channels) signals.push('multiple_channels');\nlet score=0;\nif(p.receives_leads) score+=20;\nif(p.owner_sells) score+=10;\nif(p.has_sales_team) score+=15;\nif(p.consultative_sale) score+=20;\nif(p.multiple_channels) score+=15;\nreturn [{json:{...p,fit_score:score,fit_signals:signals,status:p.status||'new',source:p.source||'manual',next_action:'research_and_personalize'}}];"},"id":"score","name":"Score Fit","type":"n8n-nodes-base.code","typeVersion":2,"position":[-360,0]},
+    {"parameters":{"jsCode":"const p=$json;\nconst priority=p.fit_score>=60?'high':p.fit_score>=35?'medium':'low';\nreturn [{json:{...p,priority,ready_for_outreach:priority!=='low',event:'prospect_scored'}}];"},"id":"priority","name":"Set Priority","type":"n8n-nodes-base.code","typeVersion":2,"position":[-100,0]},
+    {"parameters":{"jsCode":"return [{json:{...$json,action:$json.ready_for_outreach?'prepare_personalized_contact':'research_more'}}];"},"id":"action","name":"Prepare Next Action","type":"n8n-nodes-base.code","typeVersion":2,"position":[160,0]}
+  ],
+  "connections":{
+    "Trigger - Prospect":{"main":[[{"node":"Score Fit","type":"main","index":0}]]},
+    "Score Fit":{"main":[[{"node":"Set Priority","type":"main","index":0}]]},
+    "Set Priority":{"main":[[{"node":"Prepare Next Action","type":"main","index":0}]]}
+  },
+  "active":false,"settings":{},"meta":{"templateCredsSetupCompleted":false}
+}
