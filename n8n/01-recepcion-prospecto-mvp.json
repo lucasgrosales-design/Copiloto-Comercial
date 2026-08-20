@@ -1,0 +1,59 @@
+{
+  "name": "Copiloto Comercial - Recepción de Prospecto MVP",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "copiloto/prospecto",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-prospecto",
+      "name": "Entrada Prospecto",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "copiloto-prospecto-mvp"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst now = new Date().toISOString();\nconst id = `opp_${Date.now()}`;\n\nreturn [{\n  json: {\n    id,\n    name: input.name ?? null,\n    company: input.company ?? null,\n    email: input.email ?? null,\n    phone: input.phone ?? null,\n    source: input.source ?? 'unknown',\n    status: 'nuevo',\n    priority: input.priority ?? 'medium',\n    owner: input.owner ?? null,\n    created_at: now,\n    last_interaction_at: now,\n    next_action: 'contacto_inicial',\n    next_action_at: now,\n    last_message: input.message ?? null,\n    objection: null,\n    estimated_value: input.estimated_value ?? null,\n    tags: Array.isArray(input.tags) ? input.tags : []\n  }\n}];"
+      },
+      "id": "normalize-prospect",
+      "name": "Normalizar Prospecto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [280, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, opportunity: $json } }}",
+        "options": {}
+      },
+      "id": "respond-prospect",
+      "name": "Confirmar Recepción",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [560, 0]
+    }
+  ],
+  "connections": {
+    "Entrada Prospecto": {
+      "main": [[{"node": "Normalizar Prospecto", "type": "main", "index": 0}]]
+    },
+    "Normalizar Prospecto": {
+      "main": [[{"node": "Confirmar Recepción", "type": "main", "index": 0}]]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "copiloto-recepcion-mvp-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
