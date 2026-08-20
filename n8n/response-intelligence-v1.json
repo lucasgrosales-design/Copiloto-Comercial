@@ -1,0 +1,18 @@
+{
+  "name": "Copiloto Comercial - Response Intelligence v1",
+  "nodes": [
+    {"parameters":{},"id":"manual","name":"Trigger - Test Response","type":"n8n-nodes-base.manualTrigger","typeVersion":1,"position":[-700,0]},
+    {"parameters":{"jsCode":"const input = $json;\nconst text = String(input.message || input.last_message || '').toLowerCase();\nlet intent = 'unknown';\nlet urgency = 'low';\nlet human_required = false;\nlet recommended_action = 'wait';\nlet stage_action = 'keep';\nlet reason = 'No se detectó una señal suficiente para automatizar una acción.';\nif (/contratar|avanzar|cómo seguimos|como seguimos|disponibilidad|pago|formas de pago|cuándo empezamos|cuando empezamos/.test(text)) {\n  intent = 'purchase_signal'; urgency = 'high'; recommended_action = 'notify_human'; stage_action = 'advance'; human_required = true; reason = 'Se detectó una señal explícita de avance comercial.';\n} else if (/caro|precio|presupuesto|descuento|rebaja|más barato|mas barato/.test(text)) {\n  intent = 'objection'; urgency = 'medium'; recommended_action = 'notify_human'; human_required = true; reason = 'Se detectó una objeción o negociación de precio.';\n} else if (/no puedo|ahora no|más adelante|mas adelante|otro momento|el mes que viene/.test(text)) {\n  intent = 'not_now'; recommended_action = 'schedule'; stage_action = 'nurture'; reason = 'El prospecto indica que no es el momento adecuado.';\n} else if (/no me interesa|no gracias|no quiero|dejá|deja de/.test(text)) {\n  intent = 'negative'; recommended_action = 'close'; stage_action = 'close'; reason = 'El prospecto expresa una negativa.';\n} else if (/cómo|como|qué|que|cuánto|cuanto|cuándo|cuando|pueden|podés|podes/.test(text)) {\n  intent = 'question'; recommended_action = 'reply'; reason = 'El prospecto formula una pregunta que puede responderse con información autorizada.';\n} else if (/sí|si|interesa|me interesa|perfecto|genial|bien/.test(text)) {\n  intent = 'interested'; urgency = 'medium'; recommended_action = 'reply'; stage_action = 'advance'; reason = 'Se detectó interés positivo.';\n}\nreturn [{json:{...input, intent, urgency, human_required, recommended_action, stage_action, reason, confidence: intent === 'unknown' ? 0.35 : 0.82}}];"},"id":"classify","name":"Classify Response","type":"n8n-nodes-base.code","typeVersion":2,"position":[-440,0]},
+    {"parameters":{"conditions":{"options":{"caseSensitive":false},"conditions":[{"leftValue":"={{$json.human_required}}","rightValue":true,"operator":{"type":"boolean","operation":"equals"}}],"combinator":"and"}},"id":"human","name":"Human Required?","type":"n8n-nodes-base.if","typeVersion":2,"position":[-180,0]},
+    {"parameters":{"jsCode":"return [{json:{...$json, alert_type:'commercial_attention_required', alert_message:`La oportunidad requiere intervención humana. Motivo: ${$json.reason}`}}];"},"id":"alert","name":"Prepare Human Alert","type":"n8n-nodes-base.code","typeVersion":2,"position":[80,-100]},
+    {"parameters":{"jsCode":"return [{json:{...$json, next_action:$json.recommended_action, event:'response_classified'}}];"},"id":"action","name":"Prepare Next Action","type":"n8n-nodes-base.code","typeVersion":2,"position":[80,100]}
+  ],
+  "connections":{
+    "Trigger - Test Response":{"main":[[{"node":"Classify Response","type":"main","index":0}]]},
+    "Classify Response":{"main":[[{"node":"Human Required?","type":"main","index":0}]]},
+    "Human Required?":{"main":[[{"node":"Prepare Human Alert","type":"main","index":0}],[{"node":"Prepare Next Action","type":"main","index":0}]]}
+  },
+  "active":false,
+  "settings":{},
+  "meta":{"templateCredsSetupCompleted":false}
+}
