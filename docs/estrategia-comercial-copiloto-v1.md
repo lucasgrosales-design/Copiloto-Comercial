@@ -1,173 +1,126 @@
 # Estrategia comercial — Copiloto Comercial v1
 
-**Fecha de registro:** 2026-08-24  
+**Fecha:** 2026-08-24  
 **Estado:** En elaboración  
-**Tipo:** Registro de proceso, hipótesis y decisiones comerciales
+**Propósito:** definir el sistema comercial mínimo viable y utilizar la propia comercialización de Copiloto como laboratorio.
 
-## 1. Principio estratégico
+## 1. Objetivo
 
-Hipótesis central: **Copiloto debe poder utilizarse a sí mismo como caso real de comercialización.**
+Construir un sistema comercial simple, medible y replicable capaz de generar conversaciones, administrar oportunidades y ejecutar seguimiento sin perder el control humano sobre las decisiones comerciales relevantes.
 
-La propia operación comercial de Copiloto puede funcionar como laboratorio para probar prospectación, recepción de conversaciones, clasificación de oportunidades, seguimiento y detección de acciones pendientes.
+El primer caso real será la comercialización del propio Copiloto Comercial.
 
-Si la hipótesis se valida, esa operación podrá convertirse posteriormente en un caso demostrable para clientes.
+## 2. Qué vendemos
 
-### Qué vendemos
+Copiloto no se posiciona como chatbot, bot o colección de funcionalidades técnicas. La propuesta de valor es ayudar a una empresa a gestionar mejor sus consultas y oportunidades para convertir una mayor proporción en clientes, reduciendo oportunidades perdidas y mejorando el seguimiento.
 
-Copiloto no se posiciona comercialmente como chatbot, bot, asistente de IA ni como colección de funcionalidades técnicas.
+La tecnología es el medio; el resultado comercial es lo que comunicamos.
 
-La propuesta de valor es ayudar a una empresa a **gestionar mejor sus consultas y oportunidades para convertir una mayor proporción de ellas en clientes**, reduciendo oportunidades perdidas y mejorando el seguimiento comercial.
+## 3. Canales iniciales
 
-La tecnología es el medio; el resultado comercial es el producto que comunicamos.
+Los canales propios iniciales son:
 
-## 2. Límite de producto: Copiloto Comercial
-
-Copiloto tiene como responsabilidad principal la **operación comercial**:
-
-- recibir conversaciones provenientes de canales conectados;
-- identificar y organizar contactos y oportunidades;
-- analizar comercialmente las conversaciones;
-- detectar oportunidades y pendientes;
-- recomendar o ejecutar seguimientos según reglas y autorizaciones;
-- proponer respuestas comerciales;
-- registrar actividad y estados para medir resultados.
-
-### Fuera del alcance de Copiloto
-
-La estrategia de marketing, creación de contenido, identidad de marca, pauta publicitaria, programación editorial y publicación en redes sociales **no forman parte del núcleo de Copiloto Comercial**.
-
-Esas actividades permanecen bajo nuestro control. Podemos utilizar otras herramientas de IA para producir contenido, pero no convertimos a Copiloto en un gestor de redes sociales.
-
-## 3. Canales propios previstos
-
-La operación comercial propia se plantea inicialmente alrededor de:
-
-- WhatsApp;
-- correo electrónico;
+- WhatsApp.
+- Email.
 - Instagram.
 
-El objetivo es generar conversaciones y oportunidades reales que luego puedan ser gestionadas por Copiloto.
+No se amplía el universo de canales hasta validar el sistema básico.
 
-La incorporación de nuevos canales dependerá de su valor comercial y de la capacidad de mantener un flujo estable y medible.
+## 4. Flujo comercial MVP
 
-## 4. Funcionamiento comercial previsto
+**Canal → evento → contacto → oportunidad → análisis → próxima acción → seguimiento → resultado.**
 
-Flujo conceptual:
+El sistema debe cubrir progresivamente:
 
-**Adquisición → conversación → análisis → oportunidad → seguimiento → intervención humana cuando corresponda → cierre → medición.**
+1. Captación de prospectos.
+2. Ingreso y validación de mensajes.
+3. Resolución de identidad.
+4. Creación o reutilización de oportunidades.
+5. Clasificación de intención y situación comercial.
+6. Determinación de próxima acción.
+7. Seguimiento.
+8. Escalamiento a humano cuando corresponda.
+9. Registro de resultados.
+10. Medición y aprendizaje.
 
-Nosotros generamos contactos y oportunidades mediante marketing, prospección y relaciones comerciales.
+## 5. Regla de automatización
 
-Copiloto recibe y organiza las conversaciones de los canales conectados, identifica oportunidades, analiza su estado y determina la siguiente acción comercial recomendada.
+Copiloto no debe responder automáticamente por el simple hecho de recibir un mensaje.
 
-Cuando exista autorización y el caso lo permita, Copiloto podrá preparar o ejecutar mensajes. Las decisiones comerciales relevantes permanecen bajo control humano hasta que exista suficiente evidencia para automatizarlas con seguridad.
+El ingreso crea contexto y oportunidad. El motor comercial debe analizar la conversación y determinar la acción. Los mensajes generados durante la etapa MVP pueden mantenerse como borradores hasta conectar y validar el canal de salida.
 
-Toda actividad relevante debe quedar registrada para poder medir qué funciona, qué falla y qué debemos mejorar.
+Esto evita automatizar respuestas genéricas antes de disponer del criterio comercial del producto.
 
-## 5. Copiloto como primer caso de uso
+## 6. Arquitectura de datos y workflow
 
-El objetivo es que la propia comercialización de Copiloto sea una prueba controlada del producto.
+Los eventos se normalizan mediante `data/event-schema-v1.json`.
 
-Esto permitirá medir, entre otros indicadores:
+El workflow inicial de ingreso se conserva en `n8n/copiloto-ingreso-prospecto-mvp-v3.json`.
 
-- contactos generados;
-- conversaciones iniciadas;
-- consultas recibidas;
-- oportunidades calificadas;
-- seguimientos realizados;
-- oportunidades recuperadas;
-- reuniones o demostraciones obtenidas;
-- clientes convertidos;
-- motivos de pérdida;
-- tiempo de respuesta y seguimiento.
+El workflow implementa en esta etapa:
 
-No se considerará validada la propuesta por cantidad de mensajes enviados, seguidores o volumen de contenido. La validación principal será **capacidad de generar y convertir oportunidades comerciales**.
+- validación de canal y campos mínimos;
+- idempotencia básica por canal + ID externo del mensaje;
+- resolución de identidad;
+- creación o reutilización de oportunidad abierta;
+- generación del evento `message_received`;
+- creación de un borrador de salida sin envío automático.
 
-## 6. Contenido como sistema de adquisición
+La persistencia actual mediante static data de n8n es temporal. Debe reemplazarse por persistencia real antes de considerar el flujo listo para producción.
 
-Se plantea construir un banco amplio de contenido reutilizable para evitar depender de la improvisación diaria. Como hipótesis inicial se considera un banco de hasta 100 piezas/días, pero **no es un requisito del MVP ni una métrica de éxito por sí misma**.
+## 7. Laboratorio comercial propio
 
-El contenido deberá priorizar problemas comerciales reales:
+La propia comercialización de Copiloto debe utilizarse para validar:
 
-- oportunidades perdidas por falta de seguimiento;
-- tiempos de respuesta deficientes;
-- consultas que no reciben atención;
-- falta de organización comercial;
-- pérdida de información entre canales;
-- dificultades para priorizar prospectos;
-- buenas prácticas de seguimiento y conversión.
+- qué problemas generan más interés;
+- qué mensajes generan respuesta;
+- qué contenido genera conversaciones calificadas;
+- qué objeciones aparecen;
+- qué seguimiento convierte;
+- cuánto tiempo requiere una oportunidad;
+- qué parte del proceso conviene automatizar.
 
-El contenido debe educar, generar autoridad y abrir conversaciones. No se publicará contenido genérico solamente para completar un calendario.
+Los aprendizajes deben convertirse en decisiones registradas en `comercial/DECISIONES.md`.
 
-## 7. Formato de contenido
+## 8. Contenido
 
-La hipótesis actual es priorizar **video corto vertical / Reel**, acompañado de piezas gráficas cuando el mensaje lo justifique.
+El objetivo comercial es construir un banco inicial de 100 piezas, pero la producción comienza con un **lote piloto de 10 contenidos**.
 
-La producción puede combinar:
+El formato principal bajo hipótesis es Reel/video corto vertical.
 
-- demostraciones del producto;
-- capturas de pantalla;
-- animaciones;
-- gráficos;
-- texto en pantalla;
-- narración o voz IA;
-- avatares cuando aporten valor;
-- situaciones comerciales y casos reales.
+Cada pieza debe tener:
 
-La producción audiovisual no depende de una herramienta única. Se seleccionarán herramientas según calidad, velocidad, costo y facilidad de reutilización.
+- problema específico;
+- público específico;
+- hook;
+- mensaje central;
+- CTA;
+- métrica objetivo.
 
-## 8. Proceso de producción de contenido
+No se escala producción hasta medir el lote piloto.
 
-El proceso recomendado es:
+## 9. Métrica principal
 
-**Idea → objetivo comercial → hook → guion → visuales → edición → publicación → medición.**
+El alcance es una métrica secundaria. La métrica comercial prioritaria es la generación de **conversaciones comerciales calificadas**, seguida por demos, oportunidades y clientes originados.
 
-La IA puede asistir en investigación, ideación, guionización y adaptación, pero cada pieza debe conservar una intención comercial concreta.
+## 10. Gobierno de la estrategia
 
-La herramienta de producción es secundaria frente al mensaje y al objetivo.
+`comercial/DECISIONES.md` funciona como índice maestro de decisiones comerciales.
 
-## 9. Herramientas
+Los documentos específicos contienen el detalle operativo. No deben coexistir documentos duplicados que compitan como fuente de verdad sobre la misma decisión.
 
-Canva se considera una opción viable para edición y producción rápida de piezas, pero **no se establece como dependencia arquitectónica de Copiloto**.
+Las hipótesis deben permanecer identificadas como tales hasta que exista evidencia o aprobación suficiente para convertirlas en decisiones.
 
-Podrán utilizarse otras herramientas especializadas de video, imagen, voz o edición cuando aporten una ventaja concreta.
+## 11. Prioridad del MVP
 
-No se incorpora ninguna herramienta audiovisual como dependencia del producto comercial.
+**Primero producto funcional; después optimización comercial y de contenido.**
 
-## 10. Hipótesis pendientes de validar
+El núcleo del MVP es:
 
-Quedan sujetas a experimentación:
+**ingreso de prospecto → identificación → análisis → oportunidad → siguiente acción → respuesta/seguimiento controlado → registro.**
 
-- distribución de formatos;
-- duración de videos;
-- frecuencia de publicación;
-- voz propia vs. voz IA;
-- avatar vs. demostración del producto;
-- CTA principal;
-- herramientas audiovisuales;
-- sistema de medición y atribución;
-- volumen óptimo de contenido.
+Todo lo que no contribuya directamente a completar y validar este circuito queda fuera del núcleo del MVP.
 
-Una hipótesis no se convierte en requisito del producto hasta contar con evidencia que la justifique.
+## 12. Secuencia de validación
 
-## 11. Prioridad para el MVP
-
-Durante la ventana de desarrollo actual, el criterio es simple:
-
-> **Primero producto funcional; después optimización comercial y de contenido.**
-
-El MVP debe concentrarse en el circuito comercial esencial:
-
-**ingreso de prospecto → identificación → análisis con IA → oportunidad → siguiente acción → respuesta/seguimiento controlado → registro.**
-
-Todo lo que no contribuya directamente a completar y validar ese circuito queda fuera del núcleo del MVP.
-
-## 12. Próximo objetivo comercial
-
-Construir un sistema comercial mínimo viable que pueda probarse sobre la propia comercialización de Copiloto.
-
-Secuencia objetivo:
-
-**Producto funcional → canales propios → prospección → conversaciones → seguimiento asistido/automatizado → medición → aprendizaje → mejora de la oferta.**
-
-Este documento debe actualizarse cuando una hipótesis se convierta en decisión definitiva o sea descartada por evidencia.
+**Producto funcional → canales propios → 10 contenidos piloto → conversaciones → análisis comercial → seguimiento → medición → aprendizaje → ajuste → escala.**
