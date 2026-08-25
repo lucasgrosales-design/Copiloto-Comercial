@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://copiloto-comercial.local/data/outbound-message-schema-v1.json",
+  "title": "OutboundMessage",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["opportunity_id", "channel", "recipient", "text", "idempotency_key"],
+  "properties": {
+    "opportunity_id": { "type": "string", "minLength": 1 },
+    "channel": {
+      "type": "string",
+      "enum": ["whatsapp", "email", "instagram", "facebook", "linkedin", "webchat", "other"]
+    },
+    "recipient": { "type": "string", "minLength": 1 },
+    "text": { "type": "string", "minLength": 1 },
+    "reply_to_external_message_id": { "type": ["string", "null"] },
+    "idempotency_key": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": ["string", "null"],
+      "enum": ["draft", "pending_channel_connection", "queued", "sent", "failed", null]
+    },
+    "created_at": { "type": ["string", "null"], "format": "date-time" }
+  }
+}
