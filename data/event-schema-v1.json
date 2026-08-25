@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://copiloto-comercial.local/data/event-schema-v1.json",
+  "title": "Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_id", "event_type", "occurred_at", "source", "payload", "schema_version"],
+  "properties": {
+    "event_id": { "type": "string", "minLength": 1 },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "prospect_created",
+        "identity_linked",
+        "message_received",
+        "message_sent",
+        "response_classified",
+        "memory_updated",
+        "stage_changed",
+        "proposal_sent",
+        "follow_up_scheduled",
+        "follow_up_sent",
+        "human_required",
+        "human_notified",
+        "won",
+        "lost",
+        "consent_updated",
+        "do_not_contact",
+        "error"
+      ]
+    },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "contact_id": { "type": ["string", "null"] },
+    "opportunity_id": { "type": ["string", "null"] },
+    "channel": {
+      "type": ["string", "null"],
+      "enum": ["whatsapp", "email", "instagram", "facebook", "linkedin", "webchat", "other", null]
+    },
+    "source": { "type": "string", "minLength": 1 },
+    "payload": { "type": "object" },
+    "schema_version": { "type": "string", "minLength": 1 }
+  }
+}
