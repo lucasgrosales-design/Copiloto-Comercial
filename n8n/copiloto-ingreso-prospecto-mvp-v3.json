@@ -1,0 +1,53 @@
+{
+  "name": "Copiloto Comercial — Ingreso de prospecto MVP v3",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "copiloto/ingreso-prospecto",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "9bd641e3-aa90-4ae3-921c-d9bde024a902",
+      "name": "Entrada de prospecto",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "0b35db5e-8c33-4c0a-8907-9e73d91f9908"
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $input.first().json.body ?? $input.first().json;\n\nconst allowedChannels = ['whatsapp', 'email', 'instagram', 'facebook', 'linkedin', 'webchat', 'other'];\nconst missing = ['channel', 'external_message_id', 'text'].filter((field) => !payload[field] || String(payload[field]).trim() === '');\n\nif (missing.length > 0) {\n  return [{ json: { httpStatus: 400, response: { ok: false, error: 'Datos de entrada incompletos', missing, expected: { channel: 'whatsapp | email | instagram | facebook | linkedin | webchat | other', external_message_id: 'ID único del mensaje en el canal', text: 'Contenido del mensaje' } } } }];\n}\n\nif (!allowedChannels.includes(payload.channel)) {\n  return [{ json: { httpStatus: 400, response: { ok: false, error: 'Canal no soportado', allowed_channels: allowedChannels } } }];\n}\n\nconst store = $getWorkflowStaticData('global');\nstore.identityMap = store.identityMap || {};\nstore.openOpportunity = store.openOpportunity || {};\nstore.processedMessages = store.processedMessages || {};\n\nconst closedStages = ['closed_won', 'closed_lost'];\nconst senderValue = payload.sender_id || payload.sender || null;\nconst identityKey = senderValue ? payload.channel + ':' + senderValue : null;\nconst eventId = payload.event_id || 'evt-' + payload.external_message_id;\nconst receivedAt = payload.received_at || new Date().toISOString();\nconst processedKey = payload.channel + ':' + payload.external_message_id;\nconst processed = store.processedMessages[processedKey];\n\nif (processed) {\n  return [{ json: { httpStatus: 200, response: { ok: true, duplicate: true, event_id: processed.event_id, contact_id: processed.contact_id, opportunity_id: processed.opportunity_id, message: 'Mensaje ya procesado; no se creó una nueva oportunidad.' } } }];\n}\n\nlet contactId = payload.contact_id || null;\nlet contactStatus = payload.contact_id ? 'confirmed' : 'candidate';\n\nif (!contactId && identityKey && store.identityMap[identityKey]) {\n  contactId = store.identityMap[identityKey];\n  contactStatus = 'confirmed';\n}\n\nif (!contactId) contactId = 'contact-' + payload.channel + '-' + payload.external_message_id;\nif (identityKey) store.identityMap[identityKey] = contactId;\n\nlet opportunityId = payload.opportunity_id || null;\nlet isNewOpportunity = false;\n\nif (!opportunityId) {\n  const existing = store.openOpportunity[contactId];\n  if (existing && !closedStages.includes(existing.stage)) {\n    opportunityId = existing.opportunity_id;\n  } else {\n    opportunityId = 'opp-' + payload.channel + '-' + payload.external_message_id;\n    isNewOpportunity = true;\n  }\n}\n\nif (isNewOpportunity || !store.openOpportunity[contactId]) {\n  store.openOpportunity[contactId] = { opportunity_id: opportunityId, stage: 'new' };\n}\n\nstore.processedMessages[processedKey] = { event_id: eventId, contact_id: contactId, opportunity_id: opportunityId };\n\nreturn [{ json: { httpStatus: 201, response: { ok: true, duplicate: false, event: { event_id: eventId, event_type: 'message_received', occurred_at: receivedAt, contact_id: contactId, opportunity_id: opportunityId, channel: payload.channel, source: 'n8n:copiloto-ingreso-prospecto-mvp', payload: { external_message_id: payload.external_message_id, text: payload.text }, schema_version: 'v1' }, contact: { contact_id: contactId, identity: { channel: payload.channel, value: senderValue, verified: Boolean(payload.contact_id) }, status: contactStatus }, opportunity_is_new: isNewOpportunity, opportunity: { opportunity_id: opportunityId, contact_id: contactId, stage: store.openOpportunity[contactId]?.stage || 'new', owner_id: payload.owner_id || payload.owner || null, next_step: 'Analizar la conversación y determinar la próxima acción comercial', next_step_at_or_condition: 'inmediatamente después de la validación de ingreso', last_event_id: eventId, summary: 'Prospecto ingresado desde ' + payload.channel + '.' }, outbound_message_draft: { opportunity_id: opportunityId, channel: payload.channel, recipient: senderValue, text: 'Hola, recibimos tu consulta. Un asesor te responderá a la brevedad.', reply_to_external_message_id: payload.external_message_id, idempotency_key: 'out-' + eventId, status: 'draft_only_pending_channel_connection' } } } }];"
+      },
+      "id": "63ba1416-9c44-44e0-b5f9-1a96da445318",
+      "name": "Validar, resolver identidad y crear oportunidad",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [280, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.response }}",
+        "options": { "responseCode": "={{ $json.httpStatus }}" }
+      },
+      "id": "c8047a3e-38cc-4389-8bca-26e401b927fa",
+      "name": "Responder al canal",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [560, 0]
+    }
+  ],
+  "pinData": {
+    "Entrada de prospecto": [{ "json": { "headers": {}, "params": {}, "query": {}, "body": { "event_id": "evt-demo-001", "channel": "whatsapp", "external_message_id": "msg-demo-001", "contact_id": "contact-demo-001", "received_at": "2026-08-21T12:00:00Z", "text": "Hola, quiero saber cómo funciona.", "sender_id": "+5491100000000" }, "webhookUrl": "https://TU-N8N/webhook/copiloto/ingreso-prospecto", "executionMode": "manual" } }]
+  },
+  "connections": {
+    "Entrada de prospecto": { "main": [[{ "node": "Validar, resolver identidad y crear oportunidad", "type": "main", "index": 0 }]] },
+    "Validar, resolver identidad y crear oportunidad": { "main": [[{ "node": "Responder al canal", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "copiloto-ingreso-prospecto-mvp-v3",
+  "meta": { "templateCredsSetupCompleted": true, "instanceId": "copiloto-comercial-mvp" },
+  "tags": []
+}
