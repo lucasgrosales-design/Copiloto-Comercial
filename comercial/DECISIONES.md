@@ -8,9 +8,9 @@
 | 2026-08-24 | Priorizar Reel/video corto vertical como formato principal de contenido | Permitir demostrar problemas, situaciones y funcionamiento del producto | Hipótesis |
 | 2026-08-24 | Crear un banco inicial de 100 contenidos | Evitar improvisación y convertir el contenido en un sistema comercial medible | Vigente como plan |
 | 2026-08-24 | Probar primero un lote piloto de 10 contenidos antes de producir en volumen | Validar temas, hooks, formatos y CTA antes de escalar producción | Próxima acción |
-| 2026-08-24 | Consolidar la estrategia comercial y el plan de contenido en `docs/estrategia-comercial-copiloto-v1.md` y `docs/plan-contenido-100-dias-v1.md`, eliminando las versiones previas | Evitar dos fuentes de verdad para el mismo tema | Vigente |
-| 2026-08-24 | Mantener el mensaje de salida del flujo de ingreso como borrador y no enviarlo automáticamente | El motor comercial todavía debe analizar la oportunidad antes de decidir qué responder | Vigente |
-| 2026-08-24 | Usar `data/event-schema-v1.json` como esquema canónico de eventos del MVP | Evitar divergencias entre workflows y modelos de datos | Vigente |
+| 2026-08-25 | Consolidar la estrategia comercial y el plan de contenido en `docs/estrategia-comercial-copiloto-v1.md` y `docs/plan-contenido-100-dias-v1.md`, eliminando las versiones previas | Evitar dos fuentes de verdad para el mismo tema | Vigente |
+| 2026-08-25 | Mantener el mensaje de salida del flujo de ingreso como borrador y no enviarlo automáticamente | El motor comercial todavía debe analizar la oportunidad antes de decidir qué responder | Vigente |
+| 2026-08-25 | Usar `data/event-schema-v1.json` como esquema canónico de eventos del MVP | Evitar divergencias entre workflows y modelos de datos | Vigente |
 
 ## Criterio de gobierno
 
