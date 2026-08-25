@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://copiloto-comercial.local/data/opportunity-schema-v1.json",
+  "title": "Opportunity",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "opportunity_id",
+    "stage",
+    "owner_id",
+    "next_step",
+    "next_step_at_or_condition",
+    "last_event_id",
+    "summary"
+  ],
+  "properties": {
+    "opportunity_id": { "type": "string", "minLength": 1 },
+    "contact_id": { "type": ["string", "null"] },
+    "stage": {
+      "type": "string",
+      "enum": ["new", "contacted", "engaged", "qualified", "proposal_sent", "negotiation", "nurture", "closed_won", "closed_lost"]
+    },
+    "owner_id": { "type": ["string", "null"] },
+    "next_step": { "type": "string", "minLength": 1 },
+    "next_step_at_or_condition": { "type": "string", "minLength": 1 },
+    "last_event_id": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string", "minLength": 1 },
+    "intent": { "type": ["string", "null"] },
+    "lead_temperature": { "type": ["string", "null"], "enum": ["frio", "tibio", "caliente", null] },
+    "product_interest": { "type": ["string", "null"] },
+    "missing_information": { "type": "array", "items": { "type": "string" } },
+    "created_at": { "type": ["string", "null"], "format": "date-time" },
+    "updated_at": { "type": ["string", "null"], "format": "date-time" }
+  }
+}
