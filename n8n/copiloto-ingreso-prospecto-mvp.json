@@ -17,7 +17,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const payload = $input.first().json.body ?? $input.first().json;\n\nconst allowedChannels = [\n  'whatsapp', 'email', 'instagram', 'facebook',\n  'linkedin', 'webchat', 'other',\n];\n\nconst missing = ['channel', 'external_message_id', 'text']\n  .filter((field) => !payload[field] || String(payload[field]).trim() === '');\n\nif (missing.length > 0) {\n  return [{\n    json: {\n      httpStatus: 400,\n      response: {\n        ok: false,\n        error: 'Datos de entrada incompletos',\n        missing,\n        expected: {\n          channel: 'whatsapp | email | instagram | facebook | linkedin | webchat | other',\n          external_message_id: 'ID único del mensaje en el canal',\n          text: 'Contenido del mensaje',\n        },\n      },\n    },\n  }];\n}\n\nif (!allowedChannels.includes(payload.channel)) {\n  return [{\n    json: {\n      httpStatus: 400,\n      response: {\n        ok: false,\n        error: 'Canal no soportado',\n        allowed_channels: allowedChannels,\n      },\n    },\n  }];\n}\n\n// Persistencia temporal para validar el flujo MVP. No reemplaza una base\n// de datos y deberá retirarse cuando conectemos persistencia real.\nconst store = $getWorkflowStaticData('global');\nstore.identityMap = store.identityMap || {};\nstore.openOpportunity = store.openOpportunity || {};\nstore.processedMessages = store.processedMessages || {};\n\nconst closedStages = ['closed_won', 'closed_lost'];\nconst senderValue = payload.sender_id || payload.sender || null;\nconst identityKey = senderValue ? payload.channel + ':' + senderValue : null;\nconst eventId = payload.event_id || 'evt-' + payload.external_message_id;\nconst receivedAt = payload.received_at || new Date().toISOString();\n\n// Idempotencia básica: el mismo mensaje externo no debe crear otra oportunidad.\nconst processedKey = payload.channel + ':' + payload.external_message_id;\nconst processed = store.processedMessages[processedKey];\nif (processed) {\n  return [{\n    json: {\n      httpStatus: 200,\n      response: {\n        ok: true,\n        duplicate: true,\n        event_id: processed.event_id,\n        contact_id: processed.contact_id,\n        opportunity_id: processed.opportunity_id,\n        message: 'Mensaje ya procesado; no se creó una nueva oportunidad.',\n      },\n    },\n  }];\n}\n\nlet contactId = payload.contact_id || null;\nlet contactStatus = payload.contact_id ? 'confirmed' : 'candidate';\n\nif (!contactId && identityKey && store.identityMap[identityKey]) {\n  contactId = store.identityMap[identityKey];\n  contactStatus = 'confirmed';\n}\n\nif (!contactId) {\n  contactId = 'contact-' + payload.channel + '-' + payload.external_message_id;\n}\n\nif (identityKey) {\n  store.identityMap[identityKey] = contactId;\n}\n\nlet opportunityId = payload.opportunity_id || null;\nlet isNewOpportunity = false;\n\nif (!opportunityId) {\n  const existing = store.openOpportunity[contactId];\n  if (existing && !closedStages.includes(existing.stage)) {\n    opportunityId = existing.opportunity_id;\n  } else {\n    opportunityId = 'opp-' + payload.channel + '-' + payload.external_message_id;\n    isNewOpportunity = true;\n  }\n}\n\nif (isNewOpportunity || !store.openOpportunity[contactId]) {\n  store.openOpportunity[contactId] = {\n    opportunity_id: opportunityId,\n    stage: 'new',\n  };\n}\n\nstore.processedMessages[processedKey] = {\n  event_id: eventId,\n  contact_id: contactId,\n  opportunity_id: opportunityId,\n};\n\nconst identity = senderValue\n  ? {\n      channel: payload.channel,\n      value: String(senderValue),\n      verified: Boolean(payload.contact_id),\n      verified_at: payload.contact_id ? receivedAt : null,\n    }\n  : null;\n\n// El objeto de contacto se mantiene alineado con contact-identity-schema-v1.\nconst contact = {\n  contact_id: contactId,\n  company_id: payload.company_id || null,\n  identities: identity ? [identity] : [],\n  status: contactStatus,\n  source_of_match: payload.contact_id\n    ? 'payload.contact_id'\n    : identityKey && store.identityMap[identityKey] === contactId\n      ? 'channel:sender_id'\n      : null,\n};\n\n// Solo se genera un outbound_message_draft cuando existe un destinatario\n// válido. Así el objeto cumple outbound-message-schema-v1 y no se prepara\n// un envío imposible por falta de identidad de canal.\nconst outboundMessageDraft = senderValue\n  ? {\n      opportunity_id: opportunityId,\n      channel: payload.channel,\n      recipient: String(senderValue),\n      text: 'Hola, recibimos tu consulta. Un asesor te responderá a la brevedad.',\n      reply_to_external_message_id: payload.external_message_id,\n      idempotency_key: 'out-' + eventId,\n      status: 'pending_channel_connection',\n      created_at: receivedAt,\n    }\n  : null;\n\nreturn [{\n  json: {\n    httpStatus: 201,\n    response: {\n      ok: true,\n      duplicate: false,\n      event: {\n        event_id: eventId,\n        event_type: 'message_received',\n        occurred_at: receivedAt,\n        contact_id: contactId,\n        opportunity_id: opportunityId,\n        channel: payload.channel,\n        source: 'n8n:copiloto-ingreso-prospecto-mvp',\n        payload: {\n          external_message_id: payload.external_message_id,\n          text: payload.text,\n        },\n        schema_version: 'v1',\n      },\n      contact,\n      opportunity_is_new: isNewOpportunity,\n      opportunity: {\n        opportunity_id: opportunityId,\n        contact_id: contactId,\n        stage: store.openOpportunity[contactId]?.stage || 'new',\n        owner_id: payload.owner_id || payload.owner || null,\n        next_step: senderValue\n          ? 'Analizar la conversación y preparar la siguiente acción comercial'\n          : 'Resolver identidad antes de preparar contacto de salida',\n        next_step_at_or_condition: 'inmediatamente tras la validación comercial',\n        last_event_id: eventId,\n        summary: 'Prospecto ingresado desde ' + payload.channel + '.',\n      },\n      outbound_message_draft: outboundMessageDraft,\n    },\n  },\n}];"
+        "jsCode": "const payload = $input.first().json.body ?? $input.first().json;\n\nconst allowedChannels = ['whatsapp', 'email', 'instagram', 'facebook', 'linkedin', 'webchat', 'other'];\nconst missing = ['channel', 'external_message_id', 'text'].filter((field) => !payload[field] || String(payload[field]).trim() === '');\n\nif (missing.length > 0) return [{ json: { httpStatus: 400, response: { ok: false, error: 'Datos de entrada incompletos', missing, expected: { channel: 'whatsapp | email | instagram | facebook | linkedin | webchat | other', external_message_id: 'ID único del mensaje en el canal', text: 'Contenido del mensaje' } } } }];\nif (!allowedChannels.includes(payload.channel)) return [{ json: { httpStatus: 400, response: { ok: false, error: 'Canal no soportado', allowed_channels: allowedChannels } } }];\n\nconst store = $getWorkflowStaticData('global');\nstore.identityMap = store.identityMap || {};\nstore.openOpportunity = store.openOpportunity || {};\nstore.processedMessages = store.processedMessages || {};\n\nconst closedStages = ['closed_won', 'closed_lost'];\nconst senderValue = payload.sender_id || payload.sender || null;\nconst identityKey = senderValue ? payload.channel + ':' + senderValue : null;\nconst eventId = payload.event_id || 'evt-' + payload.external_message_id;\nconst receivedAt = payload.received_at || new Date().toISOString();\nconst processedKey = payload.channel + ':' + payload.external_message_id;\n\nconst processed = store.processedMessages[processedKey];\nif (processed) return [{ json: { httpStatus: 200, response: { ok: true, duplicate: true, event_id: processed.event_id, contact_id: processed.contact_id, opportunity_id: processed.opportunity_id, message: 'Mensaje ya procesado; no se creó una nueva oportunidad.' } } }];\n\nlet contactId = payload.contact_id || null;\nlet contactStatus = payload.contact_id ? 'confirmed' : 'candidate';\nif (!contactId && identityKey && store.identityMap[identityKey]) { contactId = store.identityMap[identityKey]; contactStatus = 'confirmed'; }\nif (!contactId) contactId = 'contact-' + payload.channel + '-' + payload.external_message_id;\nif (identityKey) store.identityMap[identityKey] = contactId;\n\nlet opportunityId = payload.opportunity_id || null;\nlet isNewOpportunity = false;\nif (!opportunityId) {\n  const existing = store.openOpportunity[contactId];\n  if (existing && !closedStages.includes(existing.stage)) opportunityId = existing.opportunity_id;\n  else { opportunityId = 'opp-' + payload.channel + '-' + payload.external_message_id; isNewOpportunity = true; }\n}\nif (isNewOpportunity || !store.openOpportunity[contactId]) store.openOpportunity[contactId] = { opportunity_id: opportunityId, stage: 'new' };\n\nstore.processedMessages[processedKey] = { event_id: eventId, contact_id: contactId, opportunity_id: opportunityId };\n\nconst identity = senderValue ? { channel: payload.channel, value: String(senderValue), verified: Boolean(payload.contact_id), verified_at: payload.contact_id ? receivedAt : null } : null;\nconst contact = { contact_id: contactId, company_id: payload.company_id || null, identities: identity ? [identity] : [], status: contactStatus, source_of_match: payload.contact_id ? 'payload.contact_id' : identityKey && store.identityMap[identityKey] === contactId ? 'channel:sender_id' : null };\nconst outboundMessageDraft = senderValue ? { opportunity_id: opportunityId, channel: payload.channel, recipient: String(senderValue), text: 'Hola, recibimos tu consulta. Un asesor te responderá a la brevedad.', reply_to_external_message_id: payload.external_message_id, idempotency_key: 'out-' + eventId, status: 'pending_channel_connection', created_at: receivedAt } : null;\n\nreturn [{ json: { httpStatus: 201, response: { ok: true, duplicate: false, event: { event_id: eventId, event_type: 'message_received', occurred_at: receivedAt, contact_id: contactId, opportunity_id: opportunityId, channel: payload.channel, source: 'n8n:copiloto-ingreso-prospecto-mvp', payload: { external_message_id: payload.external_message_id, text: payload.text }, schema_version: 'v1' }, contact, opportunity_is_new: isNewOpportunity, opportunity: { opportunity_id: opportunityId, contact_id: contactId, stage: store.openOpportunity[contactId]?.stage || 'new', owner_id: payload.owner_id || payload.owner || null, next_step: senderValue ? 'Analizar la conversación y preparar la siguiente acción comercial' : 'Resolver identidad antes de preparar contacto de salida', next_step_at_or_condition: 'inmediatamente tras la validación comercial', last_event_id: eventId, summary: 'Prospecto ingresado desde ' + payload.channel + '.' }, outbound_message_draft: outboundMessageDraft } } }];"
       },
       "id": "63ba1416-9c44-44e0-b5f9-1a96da445318",
       "name": "Validar, resolver identidad y crear oportunidad",
@@ -40,56 +40,14 @@
       "position": [560, 0]
     }
   ],
-  "pinData": {
-    "Entrada de prospecto": [
-      {
-        "json": {
-          "headers": {},
-          "params": {},
-          "query": {},
-          "body": {
-            "event_id": "evt-demo-001",
-            "channel": "whatsapp",
-            "external_message_id": "msg-demo-001",
-            "contact_id": "contact-demo-001",
-            "received_at": "2026-08-21T12:00:00Z",
-            "text": "Hola, quiero saber cómo funciona.",
-            "sender_id": "+5491100000000"
-          },
-          "webhookUrl": "https://TU-N8N/webhook/copiloto/ingreso-prospecto",
-          "executionMode": "manual"
-        }
-      }
-    ]
-  },
   "connections": {
-    "Entrada de prospecto": {
-      "main": [[
-        {
-          "node": "Validar, resolver identidad y crear oportunidad",
-          "type": "main",
-          "index": 0
-        }
-      ]]
-    },
-    "Validar, resolver identidad y crear oportunidad": {
-      "main": [[
-        {
-          "node": "Responder al canal",
-          "type": "main",
-          "index": 0
-        }
-      ]]
-    }
+    "Entrada de prospecto": { "main": [[{ "node": "Validar, resolver identidad y crear oportunidad", "type": "main", "index": 0 }]] },
+    "Validar, resolver identidad y crear oportunidad": { "main": [[{ "node": "Responder al canal", "type": "main", "index": 0 }]] }
   },
+  "pinData": {},
   "active": false,
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "versionId": "copiloto-ingreso-prospecto-mvp-v4",
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "copiloto-comercial-mvp"
-  },
+  "settings": { "executionOrder": "v1" },
+  "versionId": "copiloto-ingreso-prospecto-mvp-v5",
+  "meta": { "templateCredsSetupCompleted": true, "instanceId": "copiloto-comercial-mvp" },
   "tags": []
 }
