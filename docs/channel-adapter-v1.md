@@ -54,6 +54,12 @@ El núcleo comercial no conoce detalles de WhatsApp, email o redes sociales.
 5. Los errores de un canal no deben romper el pipeline comercial completo.
 6. Las preferencias y solicitudes de no contacto se aplican transversalmente cuando corresponda.
 
-## MVP
+## MVP de prueba propio
 
-Conectar primero WhatsApp y email. Los adaptadores de redes sociales quedan definidos mediante este contrato para poder incorporarlos sin modificar memoria, inteligencia ni pipeline.
+El modelo de prueba de Copiloto Comercial conectará inicialmente los tres canales propios definidos para el MVP:
+
+- WhatsApp
+- email
+- Instagram
+
+La implementación puede realizarse por etapas técnicas, pero los tres forman parte del alcance del MVP de prueba. El núcleo comercial debe permanecer independiente de los adaptadores para que una demora o error de un canal no obligue a modificar memoria, inteligencia o pipeline.
